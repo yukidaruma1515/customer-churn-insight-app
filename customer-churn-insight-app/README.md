@@ -64,9 +64,7 @@ customer-churn-insight-app/
 ```
 
 ## 7. 実行方法
-
 ```bash
-cd /Users/nobu-macbook/sophia_puro/customer-churn-insight-app
 python3 -m pip install -r requirements.txt
 python3 -m streamlit run app.py
 ```
@@ -126,7 +124,3 @@ OpenAI APIキーがある場合は、分析結果をもとにPM向け改善レ�
 - Uplift Modeling
 - レポートPDF出力
 - 定期再学習
-
-## 14. DeNAインターン応募で説明できるポイント
-
-顧客の離脱リスクを予測するだけでなく、SHAPによる要因可視化、顧客ごとの施策提案、LLMによる改善レポート生成まで実装した。これにより、データ分析を単なる予測精度の比較で終わらせず、プロダクト改善や意思決定に接続することを意識した。
