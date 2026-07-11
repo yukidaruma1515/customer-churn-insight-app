@@ -21,10 +21,11 @@ def build_report_context(
         "high_risk_count": high_risk_count,
         "high_risk_trends": high_risk_trends,
         "recommended_actions": recommended_actions,
-        "future_work": [
-            "キャンペーン配信有無などのTreatment列を追加する",
-            "A/Bテストで施策効果を検証する",
-            "T-LearnerやS-LearnerでUplift Modelingへ発展させる",
+        "ab_tests": [
+            "月額契約ユーザーに長期契約特典を提示する群と提示しない群でChurn率を比較する。",
+            "TechSupport未加入者に初月無料キャンペーンを提示し、継続率改善を検証する。",
+            "Electronic check利用者に自動支払い変更特典を提示し、解約率の変化を見る。",
+            "月額料金が高い高リスク層に料金満足度調査とプラン見直し導線を提示し、解約率の変化を見る。",
         ],
     }
 
@@ -34,6 +35,7 @@ def template_report(context: dict[str, Any]) -> str:
     top_features = "\n".join([f"- {feature}" for feature in context["top_features"]])
     trends = "\n".join([f"- {trend}" for trend in context["high_risk_trends"]])
     actions = "\n".join([f"- {action}" for action in context["recommended_actions"]])
+    ab_tests = "\n".join([f"- {test}" for test in context["ab_tests"]])
     return f"""
 ## 1. エグゼクティブサマリー
 全体のChurn率は{context['churn_rate']:.1%}です。採用モデルは{context['model_name']}で、ROC-AUCは{metrics['roc_auc']:.3f}、F1-scoreは{metrics['f1']:.3f}、Recallは{metrics['recall']:.3f}でした。高リスク顧客は{context['high_risk_count']:,}人です。
@@ -55,15 +57,7 @@ def template_report(context: dict[str, Any]) -> str:
 {actions}
 
 ## 6. 次に実施すべきA/Bテスト案
-- 月額契約ユーザーに長期契約特典を提示する群と提示しない群でChurn率を比較する。
-- TechSupport未加入者に初月無料キャンペーンを提示し、継続率改善を検証する。
-- Electronic check利用者に自動支払い変更特典を提示し、解約率の変化を見る。
-
-## 7. 今後の発展案
-現在のアプリは離脱予測と施策提案を行います。厳密なUplift Modelingには、キャンペーン配信有無、クーポン提示有無、サポート提案有無などのTreatment列が必要です。今後は施策ログを追加し、T-LearnerやS-Learnerで施策あり・なしの継続確率差を推定します。
-
-## 8. ES・面接で使える要約文
-顧客の離脱リスクを予測するだけでなく、要因可視化、顧客ごとの施策提案、LLMまたはテンプレートによる改善レポート生成まで実装しました。データ分析を予測精度の比較で終わらせず、プロダクト改善や意思決定に接続することを意識しました。
+{ab_tests}
 """.strip()
 
 
@@ -84,8 +78,6 @@ PMやビジネス職向けに、顧客離脱分析の改善レポートを日本
 4. 優先対応すべき顧客層
 5. 推奨施策
 6. 次に実施すべきA/Bテスト案
-7. 今後の発展案
-8. ES・面接で使える要約文
 
 分析コンテキスト:
 {context}

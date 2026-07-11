@@ -96,7 +96,7 @@ tabs = st.tabs(
         "Explainability",
         "High Risk Customers",
         "LLM Report",
-        "Future Work",
+        "A/B Tests",
     ]
 )
 
@@ -204,13 +204,12 @@ with tabs[5]:
         st.markdown(generate_report(report_context))
 
 with tabs[6]:
-    st.subheader("Future Work: Uplift Modelingへの発展")
+    st.subheader("次に実施すべきA/Bテスト案")
     st.markdown(
         """
-- 現在のアプリでは、離脱予測とルールベースの施策提案を行っています。
-- Telco Customer ChurnデータにはTreatment列がないため、厳密なUplift Modelingは実装していません。
-- 厳密なUplift Modelingには、キャンペーン配信有無、クーポン提示有無、サポート提案有無などの施策ログが必要です。
-- 今後はTreatment列を追加し、T-LearnerやS-Learnerで施策あり・なしの継続確率差を推定します。
-- 実サービスでは、接触履歴、問い合わせ履歴、通信品質、NPS、キャンペーン反応などを追加したいです。
+- 月額契約ユーザーに長期契約特典を提示する群と提示しない群でChurn率を比較する。
+- TechSupport未加入者に初月無料キャンペーンを提示し、継続率改善を検証する。
+- Electronic check利用者に自動支払い変更特典を提示し、解約率の変化を見る。
+- 月額料金が高い高リスク層に料金満足度調査とプラン見直し導線を提示し、解約率の変化を見る。
 """
     )
