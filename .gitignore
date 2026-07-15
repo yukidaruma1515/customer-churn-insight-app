@@ -1,0 +1,9 @@
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.coverage
+.DS_Store
+.streamlit/secrets.toml
+.env
+customer-churn-insight-app/models/*.pkl
+customer-churn-insight-app/outputs/*.csv

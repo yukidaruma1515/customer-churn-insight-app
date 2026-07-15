@@ -1,6 +1,9 @@
 from __future__ import annotations
 
 import pandas as pd
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 def global_feature_importance(model_payload: dict) -> pd.DataFrame:
@@ -34,6 +37,7 @@ def shap_customer_explanation(model_payload: dict, background: pd.DataFrame, cus
             .head(8)
         )
     except Exception:
+        logger.exception("SHAP explanation failed; using rule-based fallback")
         return None
 
 

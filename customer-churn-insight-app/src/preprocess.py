@@ -28,15 +28,19 @@ class SplitData:
 
 
 def clean_telco_data(data: pd.DataFrame) -> pd.DataFrame:
+    """Normalize numeric and target columns in a validated Telco data frame."""
     cleaned = data.copy()
     cleaned["TotalCharges"] = pd.to_numeric(cleaned["TotalCharges"], errors="coerce")
     cleaned["TotalCharges"] = cleaned["TotalCharges"].fillna(cleaned["MonthlyCharges"] * cleaned["tenure"])
-    cleaned["Churn"] = cleaned["Churn"].map({"Yes": 1, "No": 0}).astype(int)
+    if not set(cleaned["Churn"].dropna().unique()).issubset({0, 1}):
+        cleaned["Churn"] = cleaned["Churn"].map({"Yes": 1, "No": 0})
+    cleaned["Churn"] = cleaned["Churn"].astype(int)
     cleaned["SeniorCitizen"] = cleaned["SeniorCitizen"].astype(int)
     return cleaned
 
 
 def split_features(data: pd.DataFrame) -> tuple[list[str], list[str]]:
+    """Return numeric and categorical model feature names."""
     feature_data = data.drop(columns=[TARGET_COLUMN, ID_COLUMN], errors="ignore")
     numeric_features = feature_data.select_dtypes(include=[np.number]).columns.tolist()
     categorical_features = [column for column in feature_data.columns if column not in numeric_features]
@@ -44,6 +48,7 @@ def split_features(data: pd.DataFrame) -> tuple[list[str], list[str]]:
 
 
 def build_preprocessor(numeric_features: list[str], categorical_features: list[str]) -> ColumnTransformer:
+    """Build leakage-safe preprocessing for mixed Telco features."""
     numeric_pipeline = Pipeline(
         steps=[
             ("imputer", SimpleImputer(strategy="median")),
@@ -65,6 +70,7 @@ def build_preprocessor(numeric_features: list[str], categorical_features: list[s
 
 
 def make_train_test_split(data: pd.DataFrame, random_state: int = 42) -> SplitData:
+    """Create a reproducible stratified 75/25 holdout split."""
     numeric_features, categorical_features = split_features(data)
     X = data.drop(columns=[TARGET_COLUMN, ID_COLUMN], errors="ignore")
     y = data[TARGET_COLUMN]
@@ -88,6 +94,7 @@ def make_train_test_split(data: pd.DataFrame, random_state: int = 42) -> SplitDa
 
 
 def data_quality_summary(data: pd.DataFrame) -> pd.DataFrame:
+    """Summarize missingness and dtypes for display."""
     return pd.DataFrame(
         {
             "column": data.columns,

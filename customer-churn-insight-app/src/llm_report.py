@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import os
+import logging
 from typing import Any
 
 
@@ -61,10 +62,14 @@ def template_report(context: dict[str, Any]) -> str:
 """.strip()
 
 
-def generate_report(context: dict[str, Any]) -> str:
+logger = logging.getLogger(__name__)
+
+
+def generate_report(context: dict[str, Any]) -> tuple[str, bool, str | None]:
+    """Generate a report only when called; return text, template flag, and user-safe error."""
     api_key = os.getenv("OPENAI_API_KEY")
     if not api_key:
-        return template_report(context)
+        return template_report(context), True, None
     try:
         from openai import OpenAI
 
@@ -87,6 +92,7 @@ PMやビジネス職向けに、顧客離脱分析の改善レポートを日本
             input=prompt,
             temperature=0.3,
         )
-        return response.output_text
-    except Exception:
-        return template_report(context)
+        return response.output_text, False, None
+    except Exception as exc:
+        logger.exception("OpenAI report generation failed")
+        return template_report(context), True, f"APIでレポートを生成できませんでした（{type(exc).__name__}）。テンプレート版を表示します。"
