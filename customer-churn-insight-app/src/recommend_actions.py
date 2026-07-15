@@ -2,6 +2,19 @@ from __future__ import annotations
 
 import pandas as pd
 
+ACTION_RULES = [
+    {"施策": "長期契約特典", "対象条件": "Contract = Month-to-month", "根拠": "短期契約層の継続インセンティブを検証"},
+    {"施策": "料金プラン見直し", "対象条件": "MonthlyCharges >= 75", "根拠": "高料金層の負担・価値認識を確認"},
+    {"施策": "オンボーディング強化", "対象条件": "tenure <= 12", "根拠": "利用初期の定着を支援"},
+    {"施策": "TechSupport加入案内", "対象条件": "TechSupport = No", "根拠": "サポート不足の可能性を検証"},
+    {"施策": "自動支払い変更", "対象条件": "PaymentMethod = Electronic check", "根拠": "支払い体験改善の効果を検証"},
+]
+
+
+def action_rules_table() -> pd.DataFrame:
+    """Return transparent targeting conditions and rationale for each action."""
+    return pd.DataFrame(ACTION_RULES)
+
 
 def identify_risk_factors(customer: pd.Series) -> list[str]:
     factors = []

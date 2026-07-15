@@ -16,7 +16,10 @@ from sklearn.metrics import (
     recall_score,
     roc_auc_score,
     roc_curve,
+    average_precision_score,
 )
+from sklearn.model_selection import StratifiedKFold, cross_validate
+from sklearn.base import clone
 from sklearn.pipeline import Pipeline
 
 from src.preprocess import build_preprocessor, make_train_test_split
@@ -28,6 +31,12 @@ except Exception:
 
 
 def build_models(preprocessor, random_state: int = 42) -> dict[str, Pipeline]:
+    """Build three reproducible candidates with conservative anti-overfit settings.
+
+    Settings are intentionally modest for Streamlit Cloud: balanced class weights,
+    larger RF leaves, and a low LightGBM learning rate provide sensible defaults
+    without an expensive search on every uploaded data set.
+    """
     models: dict[str, Pipeline] = {
         "Logistic Regression": Pipeline(
             [
@@ -72,8 +81,9 @@ def build_models(preprocessor, random_state: int = 42) -> dict[str, Pipeline]:
 
 
 def evaluate_model(model: Pipeline, X_test: pd.DataFrame, y_test: pd.Series) -> dict[str, Any]:
-    y_pred = model.predict(X_test)
+    """Evaluate a fitted model on the untouched holdout at the conventional 0.5 threshold."""
     y_proba = model.predict_proba(X_test)[:, 1]
+    y_pred = (y_proba >= 0.5).astype(int)
     fpr, tpr, _ = roc_curve(y_test, y_proba)
     return {
         "accuracy": accuracy_score(y_test, y_pred),
@@ -81,16 +91,32 @@ def evaluate_model(model: Pipeline, X_test: pd.DataFrame, y_test: pd.Series) -> 
         "recall": recall_score(y_test, y_pred, zero_division=0),
         "f1": f1_score(y_test, y_pred, zero_division=0),
         "roc_auc": roc_auc_score(y_test, y_proba),
+        "pr_auc": average_precision_score(y_test, y_proba),
         "confusion_matrix": confusion_matrix(y_test, y_pred),
         "roc_curve": {"fpr": fpr, "tpr": tpr},
+        "y_proba": y_proba,
     }
 
 
+def cross_validation_metrics(model: Pipeline, X: pd.DataFrame, y: pd.Series, random_state: int = 42) -> dict[str, float]:
+    """Return mean and standard deviation for six stratified 5-fold CV metrics."""
+    scoring = {"accuracy": "accuracy", "precision": "precision", "recall": "recall", "f1": "f1", "roc_auc": "roc_auc", "pr_auc": "average_precision"}
+    cv = StratifiedKFold(n_splits=5, shuffle=True, random_state=random_state)
+    scores = cross_validate(clone(model), X, y, cv=cv, scoring=scoring, n_jobs=-1, error_score="raise")
+    result: dict[str, float] = {}
+    for name in scoring:
+        result[f"{name}_mean"] = float(np.mean(scores[f"test_{name}"]))
+        result[f"{name}_std"] = float(np.std(scores[f"test_{name}"], ddof=1))
+    return result
+
+
 def get_feature_names(model: Pipeline) -> list[str]:
+    """Return transformed feature names from a fitted pipeline."""
     return list(model.named_steps["preprocessor"].get_feature_names_out())
 
 
 def get_feature_importance(model: Pipeline) -> pd.DataFrame:
+    """Return model-native absolute importance values."""
     estimator = model.named_steps["model"]
     feature_names = [name.split("__")[-1] for name in get_feature_names(model)]
     if hasattr(estimator, "feature_importances_"):
@@ -113,6 +139,7 @@ def train_and_save(
     metrics_path: str | Path,
     random_state: int = 42,
 ) -> dict[str, Any]:
+    """Train candidates, evaluate holdout/CV performance, and return the best payload."""
     split = make_train_test_split(data, random_state=random_state)
     preprocessor = build_preprocessor(split.numeric_features, split.categorical_features)
     results = {}
@@ -123,6 +150,7 @@ def train_and_save(
     for name, model in build_models(preprocessor, random_state=random_state).items():
         model.fit(split.X_train, split.y_train)
         metrics = evaluate_model(model, split.X_test, split.y_test)
+        metrics["cv"] = cross_validation_metrics(model, split.X_all, split.y_all, random_state)
         results[name] = metrics
         score = 0.50 * metrics["roc_auc"] + 0.30 * metrics["f1"] + 0.20 * metrics["recall"]
         if score > best_score:
@@ -157,7 +185,8 @@ def train_and_save(
             "precision": values["precision"],
             "recall": values["recall"],
             "f1": values["f1"],
-            "roc_auc": values["roc_auc"],
+            "roc_auc": values["roc_auc"], "pr_auc": values["pr_auc"],
+            **values["cv"],
         }
         for name, values in results.items()
     ]
